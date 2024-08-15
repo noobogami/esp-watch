@@ -263,6 +263,8 @@ void setup() {
 }
 
 void loop() {
+  printVolts();
+
   if (editing < 0) {
     if (millis() - _lastChecked > 1000) {
       _lastChecked = millis();
@@ -385,4 +387,18 @@ void ShowTime() {
   display.setCursor(100, 8);
   display.print((int)DS3231_get_treg());
   display.print(" C");
+}
+
+ void printVolts()
+{
+  display.fillRect(0, 0, 60, 8, SSD1306_BLACK);
+  int sensorValue = analogRead(A0); //read the A0 pin value
+  float voltage = sensorValue * (5.00 / 1023.00) * 2; //convert the value to a true voltage.
+  display.setCursor(0,0);
+  display.print(voltage); //print the voltage to LCD
+  display.print(" V");
+  if (voltage < 6.50) //set the voltage considered low battery here
+  {
+    display.print ("LOW");
+  }
 }
