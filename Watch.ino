@@ -1,17 +1,9 @@
 #include <Wire.h>
 #include <ds3231.h>
 
-
-#include <SPI.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-#define SCREEN_WIDTH 128  // OLED display width, in pixels
-#define SCREEN_HEIGHT 64  // OLED display height, in pixels
-
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-#define OLED_RESET 4  // Reset pin # (or -1 if sharing Arduino reset pin)
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // 'Big_1', 28x44px
 const unsigned char numBig_1[] PROGMEM = {
@@ -234,28 +226,50 @@ struct ts timeToShow;
 int editing = -1;
 int lastPressedBtn;
 
-int btnU = 10;
-int btnC = 11;
-int btnD = 12;
+int btnU = 14;
+int btnC = 12;
+int btnD = 13;
+
+
+
+
+
+// ------------------------------------------------ Display ------------------------------------------------
+
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+Adafruit_SSD1306 display(128, 64, &Wire, -1);
+void DisplaySetup() {
+  Serial.println("initializing Display");
+  // initialize OLED display with I2C address 0x3C
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("failed to start SSD1306 OLED"));
+    while (1)
+      ;
+  }
+
+  display.clearDisplay();  // clear display
+  display.setCursor(0, 0);
+  display.setTextColor(SSD1306_WHITE);
+  display.display();
+  Serial.println("Display Initialized");
+}
+
+// ------------------------------------------------------------------------------------------------
 
 void setup() {
   Serial.begin(115200);
 
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for (;;)
-      ;  // Don't proceed, loop forever
-  }
+  DisplaySetup();
 
-  display.clearDisplay();
-  display.display();
-  display.setTextColor(SSD1306_WHITE);
-
-  pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(btnU, INPUT);
-  pinMode(btnC, INPUT);
-  pinMode(btnD, INPUT);
+  // pinMode(LED_BUILTIN, OUTPUT);
+  Serial.println("Setting up buttons");
+  pinMode(btnU, INPUT_PULLUP);
+  pinMode(btnC, INPUT_PULLUP);
+  pinMode(btnD, INPUT_PULLUP);
+  Serial.println("buttons set up");
 
 
   Wire.begin();
@@ -269,12 +283,17 @@ void loop() {
     if (millis() - _lastChecked > 1000) {
       _lastChecked = millis();
       DS3231_get(&timeToShow);
+      // Serial.print(timeToShow.hour);
+      // Serial.print(":");
+      // Serial.print(timeToShow.min);
+      // Serial.print(":");
+      // Serial.println(timeToShow.sec);
       ShowTime();
     }
   }
 
   display.fillRect(115, 0, 13, 8, SSD1306_BLACK);
-  if (!digitalRead(btnU) && !digitalRead(btnC) && !digitalRead(btnD)) {
+  if (digitalRead(btnU) && digitalRead(btnC) && digitalRead(btnD)) {
     if (_buttonTimer > 150) {
       buttonPressed();
     }
@@ -282,11 +301,11 @@ void loop() {
     _buttonTimer = millis();
     lastPressedBtn = -1;
   } else {
-    if (digitalRead(btnU)) {
+    if (!digitalRead(btnU)) {
       lastPressedBtn = btnU;
-    } else if (digitalRead(btnC)) {
+    } else if (!digitalRead(btnC)) {
       lastPressedBtn = btnC;
-    } else if (digitalRead(btnD)) {
+    } else if (!digitalRead(btnD)) {
       lastPressedBtn = btnD;
     }
   }
@@ -389,16 +408,15 @@ void ShowTime() {
   display.print(" C");
 }
 
- void printVolts()
-{
+void printVolts() {
   display.fillRect(0, 0, 60, 8, SSD1306_BLACK);
-  int sensorValue = analogRead(A0); //read the A0 pin value
-  float voltage = sensorValue * (5.00 / 1023.00) * 2; //convert the value to a true voltage.
-  display.setCursor(0,0);
-  display.print(voltage); //print the voltage to LCD
+  int sensorValue = analogRead(A0);                    //read the A0 pin value
+  float voltage = sensorValue * (5.00 / 1023.00) * 2;  //convert the value to a true voltage.
+  display.setCursor(0, 0);
+  display.print(voltage);  //print the voltage to LCD
   display.print(" V");
-  if (voltage < 6.50) //set the voltage considered low battery here
+  if (voltage < 6.50)  //set the voltage considered low battery here
   {
-    display.print ("LOW");
+    display.print(" LOW");
   }
 }
